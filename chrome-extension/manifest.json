@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "桌边看山 · Ambient KanShan",
+  "version": "1.0.0",
+  "description": "不做桌面上的知乎信息流，只做你浏览知乎与阅读英文论文旁边的知乎大脑：划词即出神比喻、破茧观点、高赞×潜力回答与 7 天跨页记忆。",
+  "permissions": ["storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "桌边看山 · 7 天跨页术语本"
+  }
+}

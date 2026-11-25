@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>桌边看山 · Ambient KanShan — 纯粹知乎阅读伴侣</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #F4F6F9;
+      color: #0F172A;
+      overflow-x: hidden;
+    }
+    .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+
+    .term-hl {
+      background: rgba(0, 102, 255, 0.08);
+      border-bottom: 1.5px dashed rgba(0, 102, 255, 0.65);
+      color: #0044B3;
+      padding: 1px 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.16s ease;
+    }
+    .term-hl:hover { background: rgba(0, 102, 255, 0.18); }
+    .code-term-hl {
+      background: rgba(56, 189, 248, 0.15);
+      border-bottom: 1.5px dashed #38BDF8;
+      color: #7DD3FC;
+      padding: 1px 4px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .code-term-hl:hover { background: rgba(56, 189, 248, 0.28); }
+
+    /* Adaptive Frosted Glass Surfaces */
+    .glass-light {
+      background: rgba(255, 255, 255, 0.90);
+      backdrop-filter: blur(18px) saturate(165%);
+      -webkit-backdrop-filter: blur(18px) saturate(165%);
+      border: 1px solid rgba(15, 23, 42, 0.09);
+      box-shadow: 0 18px 44px -14px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.05);
+      color: #0F172A;
+    }
+    .glass-dark {
+      background: rgba(15, 23, 42, 0.90);
+      backdrop-filter: blur(18px) saturate(165%);
+      -webkit-backdrop-filter: blur(18px) saturate(165%);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 20px 48px -12px rgba(2, 6, 23, 0.65);
+      color: #F1F5F9;
+    }
+
+    @keyframes springIn {
+      0%   { opacity: 0; transform: translateY(8px) scale(0.96); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .spring-pop { animation: springIn 0.20s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+    #corner-pet-layer { transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1); }
+    .pet-periphery { transform: translateX(8px) translateY(4px); }
+    .pet-ready     { transform: translateX(-6px) translateY(-6px); }
+
+    @keyframes tailWag {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(10deg); }
+    }
+    @keyframes earPerk {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-2.5px); }
+    }
+    .ks-tail { transform-origin: 76px 78px; animation: tailWag 3s ease-in-out infinite; }
+    .ks-ear-perk { animation: earPerk 1.2s ease-in-out infinite; }
+
+    .scroll-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+    .scroll-thin::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+
+    .mobile-frame {
+      max-width: 410px !important;
+      margin-left: auto;
+      margin-right: auto;
+      border-radius: 28px !important;
+      border-width: 6px !important;
+      border-color: #1E293B !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Toast -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300">
+    <div id="toast-msg" class="px-4 py-2 rounded-full bg-slate-900/95 text-white text-xs font-medium shadow-lg flex items-center gap-2"></div>
+  </div>
+
+  <!-- 7-Day Memory Vault, Glossary Export & Zhihu Idea Reverse-Creation Modal -->
+  <div id="vault-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200 max-h-[86vh] flex flex-col">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i data-lucide="book-marked" class="w-4 h-4 text-[#0066FF]"></i>
+          近 7 天跨页术语本 &amp; 知乎想法生成（<span id="vault-count">0</span>/20）
+        </h3>
+        <button id="btn-close-vault" type="button" class="text-slate-400 hover:text-slate-700 p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto scroll-thin space-y-4 pr-1">
+        <!-- Privacy & Quota Mini Strip -->
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 flex flex-wrap items-center justify-between gap-2">
+          <span>🔒 本地 7 天记忆（上限 20 条，不上传整屏）</span>
+          <span class="font-mono-code">搜索 <strong id="q-search" class="text-[#0044B3]">0</strong>/5k · 直答 <strong id="q-zhida" class="text-teal-700">0</strong>/100 · 缓存 <strong id="q-cache" class="text-emerald-700">0</strong></span>
+        </div>
+
+        <!-- 7-Day Cross-Page Term Memory List -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-800">已沉淀术语卡（跨页再次遇到会自动串联提醒）</span>
+            <div class="flex items-center gap-2">
+              <button id="btn-copy-md" type="button" class="text-[11px] font-semibold text-[#0044B3] hover:underline">导出 Markdown</button>
+              <button id="btn-clear-memory" type="button" class="text-[11px] text-slate-400 hover:text-rose-600">清空</button>
+            </div>
+          </div>
+          <div id="vault-list" class="space-y-2 text-xs"></div>
+        </div>
+
+        <!-- Reverse Creation Loop: 1-Click Generate Zhihu Idea / Reflection Card -->
+        <div class="pt-3 border-t border-slate-200">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-[#0066FF]"></i>
+              反向创作闭环：一键生成「知乎想法 / 读后感」
+            </span>
+            <button id="btn-gen-idea" type="button" class="px-3 py-1 rounded-lg bg-[#0066FF] hover:bg-[#0052CC] text-white text-[11px] font-semibold transition">
+              生成知乎想法
+            </button>
+          </div>
+          <div id="zhihu-idea-box" class="hidden space-y-2">
+            <textarea id="zhihu-idea-text" class="w-full h-36 rounded-xl bg-blue-50/50 border border-blue-200 p-3 text-xs text-slate-800 leading-relaxed focus:outline-none focus:border-[#0066FF]"></textarea>
+            <div class="flex justify-end gap-2">
+              <button id="btn-copy-idea" type="button" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制去发知乎想法
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+        <button id="btn-close-vault-2" type="button" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Sandbox Control Bar (Laser-Focused Pure Reading Companion!) -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-2.5 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-xl bg-[#0066FF] text-white flex items-center justify-center font-bold text-sm shadow-sm">山</span>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">桌边看山 · Ambient KanShan</h1>
+            <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-[#0044B3] border border-blue-200">纯阅读伴侣</span>
+          </div>
+          <p class="text-[11px] text-slate-500 hidden sm:block">英文长难句拆解 · 知乎证据构成条 · 7天/20词跨页记忆串联 · 一键生成知乎想法</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <button id="btn-sim-dwell" type="button" class="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0044B3] border border-blue-200 font-semibold text-xs transition flex items-center gap-1">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+          <span>模拟停留预备态</span>
+        </button>
+        <button id="btn-open-vault" type="button" class="px-3 py-1.5 rounded-xl bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-sm">
+          <i data-lucide="book-marked" class="w-3.5 h-3.5"></i>
+          <span>术语本 &amp; 知乎想法 (<span id="header-mem-count">0</span>/20)</span>
+        </button>
+        <button id="btn-toggle-mobile" type="button" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition flex items-center gap-1">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5 text-teal-600"></i>
+          <span id="mobile-toggle-label" class="hidden md:inline">知乎 App 入口视角</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Simulated Browser Frame (5 Pure Reading Scenarios — Bait Tab & Pomodoro Removed!) -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-5">
+    <div id="browser-shell" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all duration-300">
+
+      <!-- 5 Reading Scenario Tabs -->
+      <div class="bg-slate-100 border-b border-slate-200 px-3 pt-2.5 flex items-end gap-1 overflow-x-auto scroll-thin">
+        <div class="hidden sm:flex items-center gap-1.5 pb-2.5 pr-3">
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+        </div>
+        <button data-tab="paper" type="button" class="browser-tab px-3.5 py-2 rounded-t-xl text-xs font-semibold whitespace-nowrap bg-white text-slate-900 border-t border-x border-slate-200">📄 英文论文</button>
+        <button data-tab="code" type="button" class="browser-tab px-3.5 py-2 rounded-t-xl text-xs font-medium whitespace-nowrap text-slate-600 hover:bg-slate-200/70">💻 CUDA 报错</button>
+        <button data-tab="finance" type="button" class="browser-tab px-3.5 py-2 rounded-t-xl text-xs font-medium whitespace-nowrap text-slate-600 hover:bg-slate-200/70">📊 财报研报</button>
+        <button data-tab="news" type="button" class="browser-tab px-3.5 py-2 rounded-t-xl text-xs font-medium whitespace-nowrap text-slate-600 hover:bg-slate-200/70">📰 AI 前沿新闻</button>
+        <button data-tab="gba" type="button" class="browser-tab px-3.5 py-2 rounded-t-xl text-xs font-medium whitespace-nowrap text-slate-600 hover:bg-slate-200/70">🌉 大湾区热词彩蛋</button>
+      </div>
+
+      <!-- Address Bar + HN-style Page Hot Discussion Badge -->
+      <div class="bg-white border-b border-slate-100 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+        <div class="flex items-center gap-2 flex-1 min-w-0 bg-slate-50 border border-slate-200/80 rounded-lg px-3 py-1.5">
+          <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-600 shrink-0"></i>
+          <span id="fake-url" class="font-mono-code text-[11px] truncate text-slate-600">https://arxiv.org/html/2611.04821 — Efficient Long-Context Inference</span>
+        </div>
+        <button id="btn-page-hot" type="button" class="px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-[#0044B3] border border-blue-200/80 text-[11px] font-semibold flex items-center gap-1.5 transition shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#0066FF]"></span>
+          <span id="page-hot-label">知乎有 9 条热议</span>
+        </button>
+      </div>
+
+      <!-- Reading Viewport -->
+      <div id="reading-viewport" class="p-5 sm:p-8 min-h-[420px] bg-white relative"></div>
+
+      <!-- Arbitrary Query Tester Bar -->
+      <div class="border-t border-slate-100 bg-slate-50/80 px-5 sm:px-8 lg:pr-28 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <span class="text-xs font-semibold text-slate-600 shrink-0 flex items-center gap-1.5">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-[#0066FF]"></i>
+          任意词句 / 英文长难句测试：
+        </span>
+        <input id="arbitrary-test-input" type="text" placeholder="试试粘贴一整句英文论文或任意术语（如 naive sliding-window eviction leads to severe perplexity collapse）" class="flex-1 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0066FF]" />
+        <button id="btn-arbitrary-test" type="button" class="px-3.5 py-1.5 rounded-lg bg-[#0066FF] hover:bg-[#0052CC] text-white text-xs font-semibold transition shrink-0">
+          弹出 L1–L3
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== CURSOR-ANCHORED MICRO-CAPSULE ==================== -->
+  <div id="pet-capsule" class="hidden fixed z-40 spring-pop">
+    <div id="capsule-inner" class="glass-light rounded-full px-3 py-1.5 flex items-center gap-1.5 text-xs">
+      <span class="w-5 h-5 rounded-full bg-[#0066FF] text-white flex items-center justify-center text-[10px] font-bold shrink-0">山</span>
+      <span id="capsule-term-label" class="font-semibold text-[11px] max-w-[130px] truncate">Attention Sink</span>
+      <span class="opacity-25">|</span>
+      <button id="cap-btn-l1" type="button" class="px-1.5 py-0.5 rounded-full hover:bg-blue-500/10 text-[#0066FF] font-semibold text-[11px] transition">形象懂</button>
+      <button id="cap-btn-l2" type="button" class="px-1.5 py-0.5 rounded-full hover:bg-amber-500/10 text-amber-700 font-semibold text-[11px] transition">破茧看</button>
+      <button id="cap-btn-l3" type="button" class="px-1.5 py-0.5 rounded-full hover:bg-teal-500/10 text-teal-700 font-semibold text-[11px] transition">高赞×潜力</button>
+      <button id="cap-btn-close" type="button" class="opacity-45 hover:opacity-100 p-0.5">
+        <i data-lucide="x" class="w-3 h-3"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== CURSOR-ANCHORED 3-PILLAR KNOWLEDGE CARD ==================== -->
+  <div id="knowledge-bubble" class="hidden fixed z-40 w-[356px] sm:w-[408px] max-w-[calc(100vw-24px)] rounded-2xl overflow-hidden spring-pop glass-light">
+    <!-- Clean Header -->
+    <div class="px-4 py-3 border-b border-slate-400/20 flex items-center justify-between gap-2 relative">
+      <span class="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-[#0066FF]"></span>
+      <div class="min-w-0 pl-1">
+        <div id="kb-term" class="text-xs font-bold truncate">术语名称</div>
+        <div id="kb-meta-badge" class="text-[10px] opacity-65">知乎双路检索命中 · 直答消耗 0 次</div>
+      </div>
+      <div class="flex items-center gap-1 shrink-0">
+        <button id="btn-save-glossary" type="button" class="text-[10px] font-semibold px-2 py-1 rounded-lg bg-blue-500/10 text-[#0066FF] hover:bg-blue-500/20 transition">+ 术语本</button>
+        <button id="btn-close-bubble" type="button" class="opacity-55 hover:opacity-100 p-1 rounded-lg">
+          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Cross-Page Memory Bridge Banner (Auto-appears when term was read on another page within 7 days!) -->
+    <div id="cross-page-banner" class="hidden px-4 py-2 bg-gradient-to-r from-emerald-500/15 to-blue-500/15 border-b border-emerald-500/25 text-[11px] leading-snug">
+      <span class="font-bold text-emerald-700">✦ 跨页记忆串联：</span>
+      <span id="cross-page-text"></span>
+    </div>
+
+    <!-- 3-Pillar Segmented Tabs -->
+    <div class="px-3.5 pt-2.5 flex gap-1.5 border-b border-slate-400/15 pb-2">
+      <button data-layer="l1" type="button" class="kb-tab flex-1 py-1.5 rounded-lg text-[11px] font-semibold bg-[#0066FF] text-white transition">L1 形象化理解</button>
+      <button data-layer="l2" type="button" class="kb-tab flex-1 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-500/10 opacity-80 hover:opacity-100 transition">L2 破茧看法</button>
+      <button data-layer="l3" type="button" class="kb-tab flex-1 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-500/10 opacity-80 hover:opacity-100 transition">L3 高赞×潜力</button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-3.5 max-h-[58vh] overflow-y-auto scroll-thin space-y-2.5">
+
+      <!-- L1 Panel: Analogy + Concrete English Complex Sentence Breakdown -->
+      <div id="panel-l1" class="space-y-2.5">
+        <div class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+          <div class="flex items-center justify-between text-[10px] font-semibold text-[#0066FF] mb-1">
+            <span id="kb-l1-title">🎨 形象化神比喻</span>
+            <span id="kb-l1-votes" class="font-mono-code"></span>
+          </div>
+          <p id="kb-analogy" class="text-[13px] font-semibold leading-relaxed"></p>
+        </div>
+        <div id="kb-context-role" class="p-2.5 rounded-xl bg-slate-500/10 text-xs leading-relaxed"></div>
+      </div>
+
+      <!-- L2 Panel: Evidence Composition Bar + Anti-Echo-Chamber Perspectives -->
+      <div id="panel-l2" class="hidden space-y-2.5">
+        <!-- Minimalist Zhihu Evidence Composition Bar -->
+        <div class="p-2.5 rounded-xl bg-slate-500/10 space-y-1.5">
+          <div class="flex items-center justify-between text-[10px] font-semibold">
+            <span>📊 知乎证据构成条</span>
+            <span id="ev-summary-l2" class="font-mono-code opacity-80"></span>
+          </div>
+          <div class="w-full h-2 rounded-full overflow-hidden flex bg-slate-300/40">
+            <div id="ev-bar-prac" class="bg-emerald-500 h-full" style="width:40%"></div>
+            <div id="ev-bar-counter" class="bg-rose-500 h-full" style="width:30%"></div>
+            <div id="ev-bar-filtered" class="bg-slate-400/60 h-full" style="width:30%"></div>
+          </div>
+          <div id="ev-legend-l2" class="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] opacity-75"></div>
+        </div>
+        <div id="kb-perspectives-list" class="space-y-2"></div>
+      </div>
+
+      <!-- L3 Panel: Evidence Signal + Classic High-Upvote vs Rising Potential Answers + On-Demand Zhida -->
+      <div id="panel-l3" class="hidden space-y-3">
+        <div id="ev-summary-l3" class="px-2.5 py-1.5 rounded-lg bg-teal-500/10 border border-teal-500/20 text-[10.5px] font-medium text-teal-700"></div>
+        <div>
+          <div class="text-[11px] font-bold text-[#0066FF] mb-1.5">🏆 高赞经典回答（社区共识）</div>
+          <div id="kb-classic-answers" class="space-y-1.5"></div>
+        </div>
+        <div>
+          <div class="text-[11px] font-bold text-teal-600 mb-1.5">🌱 潜力黑马回答（7 天内新锐 · 信息密度 Top 10%）</div>
+          <div id="kb-rising-answers" class="space-y-1.5"></div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-400/20 space-y-2">
+          <button id="btn-trigger-zhida" type="button" class="w-full py-2 px-3 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 border border-teal-500/25 text-xs font-semibold flex items-center justify-between transition">
+            <span>✦ 按需追问知乎直答 Agent（结合本段语境）</span>
+            <span class="text-[10px] font-mono-code">-1 额度</span>
+          </button>
+          <div id="kb-zhida-box" class="hidden p-3 rounded-xl bg-slate-900 text-slate-100 text-xs leading-relaxed space-y-2">
+            <div class="flex items-center justify-between text-[10px] text-teal-300 font-semibold">
+              <span>✦ 知乎直答 Agent · 溯源深答</span>
+              <span id="kb-zhida-status">已锚定当前段落</span>
+            </div>
+            <p id="kb-zhida-text" class="whitespace-pre-line"></p>
+            <form id="zhida-followup-form" class="pt-2 border-t border-slate-700/80 flex gap-1.5">
+              <input id="zhida-followup-input" type="text" placeholder="继续追问（如：反方观点站得住吗 / 怎么排查？）" class="flex-1 rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-[11px] text-white placeholder-slate-400 focus:outline-none focus:border-teal-400" />
+              <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 font-semibold text-[11px]">追问</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CALM PERIPHERY READING COMPANION PET ==================== -->
+  <div id="corner-pet-layer" class="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 pointer-events-none pet-periphery">
+    <button id="pet-svg-btn" type="button" class="pointer-events-auto w-20 h-20 rounded-full glass-light flex items-center justify-center hover:scale-105 transition cursor-pointer relative" title="点击打开 7 天跨页术语本与知乎想法生成器">
+      <span id="pet-mem-badge" class="hidden absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1 rounded-full bg-[#0066FF] text-white text-[10px] font-bold flex items-center justify-center shadow">0</span>
+      <svg id="kanshan-svg" viewBox="0 0 100 100" style="width:68px;height:68px;">
+        <g id="ks-tail-layer" class="ks-tail">
+          <path d="M72 78 C92 78, 94 56, 80 54 C74 53, 72 66, 68 74 Z" fill="#F8FAFC" stroke="#1E293B" stroke-width="2.5" stroke-linejoin="round" />
+        </g>
+        <g id="ks-body-layer">
+          <path d="M30 82 C30 58, 70 58, 70 82 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="2.5" stroke-linejoin="round" />
+          <path d="M34 62 Q50 70 66 62 L64 70 Q50 77 36 70 Z" fill="#0066FF" stroke="#1E293B" stroke-width="2" stroke-linejoin="round" />
+          <path d="M55 68 L61 81 L53 82 L50 70 Z" fill="#0052CC" stroke="#1E293B" stroke-width="1.8" stroke-linejoin="round" />
+        </g>
+        <g id="ks-head-layer">
+          <g id="ks-ears">
+            <path d="M31 38 L26 17 L44 29 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="2.5" stroke-linejoin="round" />
+            <path d="M32 34 L29 22 L40 30 Z" fill="#DBEAFE" />
+            <path d="M69 38 L74 17 L56 29 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="2.5" stroke-linejoin="round" />
+            <path d="M68 34 L71 22 L60 30 Z" fill="#DBEAFE" />
+          </g>
+          <ellipse cx="50" cy="45" rx="23" ry="19" fill="#FFFFFF" stroke="#1E293B" stroke-width="2.5" />
+          <circle cx="41" cy="44" r="2.7" fill="#0F172A" />
+          <circle cx="59" cy="44" r="2.7" fill="#0F172A" />
+          <circle cx="42" cy="43" r="0.9" fill="#FFFFFF" />
+          <circle cx="60" cy="43" r="0.9" fill="#FFFFFF" />
+          <ellipse cx="34" cy="49" rx="3.2" ry="1.8" fill="#FDA4AF" opacity="0.7" />
+          <ellipse cx="66" cy="49" rx="3.2" ry="1.8" fill="#FDA4AF" opacity="0.7" />
+          <ellipse cx="50" cy="48" rx="2.4" ry="1.7" fill="#1E293B" />
+          <path d="M46 52 Q50 55 54 52" fill="none" stroke="#1E293B" stroke-width="1.8" stroke-linecap="round" />
+        </g>
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    (function () {
+      const MEMORY_STORAGE_KEY = 'ambient_kanshan_7d_memory_v1';
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+      const MAX_MEMORY_ITEMS = 20;
+
+      // ==================== 1. ZHIHU KNOWLEDGE GRAPH WITH EVIDENCE TELEMETRY ====================
+      const KB = [
+        {
+          id: 'Attention Sink',
+          aliases: ['attention sink', 'sink-aware', 'sink states', 'initial tokens', '注意力汇点'],
+          term: 'Attention Sink（注意力汇点）',
+          votes: '4.8k 赞同提炼',
+          analogy: '大模型总把多余注意力“倒进”开头两词，像考场发呆时眼神习惯钉在黑板左上角——不是左上角有答案，而是 Softmax 必须找个垃圾桶泄洪。',
+          contextRole: '在当前段落中，它解释了为什么直接丢弃开头 Token 会导致长文本崩溃，以及为什么固定保留前 4 个锚点就能免微调外推。',
+          evidence: { total: 14, practical: 5, counter: 4, filtered: 5, risingSignal: '已按「7 天内发布 × 实测信息密度」筛出 1 条潜力黑马回答' },
+          perspectives: [
+            { stance: '支持 · 工程实测', cls: 'bg-emerald-500/15 text-emerald-700', text: '流式对话与 Agent 场景下极度实用，零重训成本即可让 4K 窗口模型稳定跑通百万长度输出。' },
+            { stance: '质疑 · 打破盲从', cls: 'bg-rose-500/15 text-rose-600', text: '注意！它只保证“生成不崩（低 PPL）”，被滑窗踢掉的中间事实其实已经彻底遗忘，不能替代真正长程记忆。' },
+            { stance: '跨界 · 理论延伸', cls: 'bg-blue-500/15 text-blue-700', text: 'ViT 视觉领域也发现了类似 Register Token，说明这是 Softmax 归一化带来的跨模态通病。' }
+          ],
+          classicAnswers: [
+            { author: '苏剑林 · 算法研究员', votes: '4,820 赞同', excerpt: '“Softmax 归一化约束逼着模型在无话可说时必须选一个泄洪口，位置 0 恰好对后续所有 Token 都可见。”', url: 'https://www.zhihu.com/search?type=content&q=Attention+Sink' }
+          ],
+          risingAnswers: [
+            { author: '新锐推理框架作者 · 3 天前', votes: '186 赞同 · 潜力黑马', excerpt: '“实测在 Llama-3.2 端侧量化时，保留 2 个 Sink + 动态重标定 RoPE 比原版 4 个 Sink 省 14% 带宽。”', url: 'https://www.zhihu.com/search?type=content&q=StreamingLLM+RoPE+%E5%AE%9E%E6%B5%8B' }
+          ],
+          zhida: '结合本页论文：作者用 Sink-Aware 压缩在保留全局锚点的同时动态驱逐中间低权重段。若你关心“能否记住 10 万字前的具体数字”，请结合 L2 反方观点——它解决的是流畅度外推，而非无损召回。'
+        },
+        {
+          id: 'KV Cache',
+          aliases: ['kv cache', 'use_cache', '键值缓存', 'cache buffers'],
+          term: 'KV Cache（键值缓存）',
+          votes: '6.3k 赞同提炼',
+          analogy: '像做数学大题把前面算好的草稿纸贴在桌边，每步直接抄结果——代价是桌子（显存）很快被草稿纸铺满。',
+          contextRole: '在当前页面里，它是贯穿“论文算法瓶颈 → CUDA 显存报错 → 云厂商降本 62% 财报”的核心主角。',
+          evidence: { total: 18, practical: 7, counter: 5, filtered: 6, risingSignal: '已筛出 1 条 5 天内端侧 NPU 量化实测黑马回答' },
+          perspectives: [
+            { stance: '主流共识 · 架构演进', cls: 'bg-emerald-500/15 text-emerald-700', text: 'PagedAttention + MLA 已把长文本 KV 显存压到两年前的 1/10，成为推理降本核心抓手。' },
+            { stance: '反面吐槽 · 一线真相', cls: 'bg-rose-500/15 text-rose-600', text: '“业务方总以为买卡只看算力 TFLOPS，真上线并发才发现 80G 显存一大半被 KV Cache 吃光。”' },
+            { stance: '前沿分歧 · 替代路线', cls: 'bg-blue-500/15 text-blue-700', text: '线性注意力（Mamba / RWKV）派认为彻底抛弃 KV Cache 才是终局，但精确召回仍存争议。' }
+          ],
+          classicAnswers: [
+            { author: 'vLLM 社区贡献者', votes: '6,310 赞同', excerpt: '“PagedAttention 把虚拟内存分页搬来管 KV Cache，把显存碎片率从 60% 压到 4% 以下。”', url: 'https://www.zhihu.com/search?type=content&q=KV+Cache+%E9%80%9A%E4%BF%97%E8%A7%A3%E9%87%8A' }
+          ],
+          risingAnswers: [
+            { author: '端侧芯片工程师 · 5 天前', votes: '240 赞同 · 潜力黑马', excerpt: '“手机端 NPU 跑 7B 模型时，把 KV Cache 异步卸载到 LPDDR5X 并做 INT4 分组量化，首字延迟只增 8ms。”', url: 'https://www.zhihu.com/search?type=content&q=KV+Cache+INT4+%E7%AB%AF%E4%BE%A7' }
+          ],
+          zhida: '在当前语境下，开启 use_cache=True 会驻留历史 Key/Value；在论文里它决定长上下文上限，在代码里它易引发 OOM，在财报里压缩它则直接降低 62% 推理成本。'
+        },
+        {
+          id: 'CUDA out of memory',
+          aliases: ['cuda out of memory', 'outofmemoryerror', 'tried to allocate', 'memory in use'],
+          term: 'CUDA out of memory（显存溢出）',
+          votes: '1.1w 赞同提炼',
+          analogy: '拿 24 寸行李箱硬塞全套羽绒服，拉链崩开那一刻 PyTorch 礼貌提示：“还差 512MB，自己想办法。”',
+          contextRole: '当前堆栈崩在 evaluate_model 第 218 行，极可能是验证循环忘了关梯度或忘了关 use_cache。',
+          evidence: { total: 16, practical: 8, counter: 3, filtered: 5, risingSignal: '已筛出 PyTorch 官方内存快照可视化排障新锐回答' },
+          perspectives: [
+            { stance: '急救共识 · 三板斧', cls: 'bg-emerald-500/15 text-emerald-700', text: '先查 with torch.no_grad() 和 .item()，再开 gradient_checkpointing 与 bf16。' },
+            { stance: '破除误区 · 碎片真相', cls: 'bg-rose-500/15 text-rose-600', text: '盲目调小 batch_size 往往治标不治本，reserved >> allocated 时开 expandable_segments 才对症。' }
+          ],
+          classicAnswers: [
+            { author: '炼丹五年老工程师', votes: '11,400 赞同', excerpt: '“把 loss 直接 append 到 list 没加 .item() 是最隐蔽的显存泄漏，三个 epoch 必炸。”', url: 'https://www.zhihu.com/search?type=content&q=CUDA+out+of+memory+%E8%B8%A9%E5%9D%91' }
+          ],
+          risingAnswers: [
+            { author: 'PyTorch 源码贡献者 · 1 周前', votes: '312 赞同 · 潜力黑马', excerpt: '“用 torch.cuda.memory._record_memory_history() 导出快照拖进官网可视化器，30 秒锁定未释放张量。”', url: 'https://www.zhihu.com/search?type=content&q=torch.cuda.memory+snapshot+OOM' }
+          ],
+          zhida: '结合堆栈：Process 19482 已占 23.12 GiB 且启用了 use_cache=True。建议在 evaluate_model 外层包 with torch.inference_mode(): 并设 use_cache=False。'
+        },
+        {
+          id: 'CapEx 资本开支',
+          aliases: ['capex', '资本开支', '自由现金流', '折旧', '毛利率'],
+          term: 'CapEx、折旧与自由现金流',
+          votes: '3.9k 赞同提炼',
+          analogy: '开奶茶店花 50 万买顶级制冰机——钱今天一次性掏出去，会计上分几年摊销，利润表好看但现金流先瘦一圈。',
+          contextRole: '当前季报中 CapEx 同比 +48% 高于云营收 +29%，引发市场对折旧反噬毛利率的激烈争论。',
+          evidence: { total: 12, practical: 4, counter: 4, filtered: 4, risingSignal: '已筛出云厂商财务 BP 拆解训练/推理回收期黑马回答' },
+          perspectives: [
+            { stance: '多头视角 · 算力护城河', cls: 'bg-emerald-500/15 text-emerald-700', text: '推理成本同比降 62% 说明规模效应已现，现在不买卡明年就会被踢出牌桌。' },
+            { stance: '空头质疑 · 折旧陷阱', cls: 'bg-rose-500/15 text-rose-600', text: 'GPU 两年一换代，把服务器折旧年限拉长到 6 年属于会计美容，未来可能面临集中减值。' }
+          ],
+          classicAnswers: [
+            { author: '二级市场科技研究员', votes: '3,920 赞同', excerpt: '“算力军备竞赛期，CapEx 是门票也是枷锁：少投怕掉队，多投怕折旧太快。”', url: 'https://www.zhihu.com/search?type=content&q=AI+%E4%BA%91%E5%8E%82%E5%95%86+CapEx' }
+          ],
+          risingAnswers: [
+            { author: '云基础设施财务 BP · 4 天前', votes: '158 赞同 · 潜力黑马', excerpt: '“别只看总 CapEx，要拆开看其中多少买了训练集群、多少买了高毛利推理卡，两者回收期差 2.5 倍。”', url: 'https://www.zhihu.com/search?type=content&q=CapEx+%E8%AE%AD%E7%BB%83+%E6%8E%A8%E7%90%86' }
+          ],
+          zhida: '结合本页季报：建议把「CapEx / 云营收比」与「自由现金流转正时间点」联合追踪，而非孤立看当季净利润。'
+        },
+        {
+          id: 'Sim2Real',
+          aliases: ['sim2real', '灵巧手', '力控偏差', '仿真环境', '具身智能'],
+          term: 'Sim2Real 与毫米级力控',
+          votes: '5.2k 赞同提炼',
+          analogy: '驾校模拟器里练成车神，真上路发现方向盘沉、地面打滑——中间的心理阴影面积就是 Sim2Real Gap。',
+          contextRole: '当前新闻指出，具身智能从实验室演示走向真实产线的最大拦路虎正是力控与接触摩擦迁移。',
+          evidence: { total: 13, practical: 5, counter: 4, filtered: 4, risingSignal: '已筛出深圳灵巧手创业者 6 天前真机闭环实测回答' },
+          perspectives: [
+            { stance: '仿真派 · 算力换数据', cls: 'bg-emerald-500/15 text-emerald-700', text: '并行仿真一天能跑出真机十年轨迹，配合领域随机化已攻克大部分行走与粗抓取。' },
+            { stance: '真机派 · 物理现实', cls: 'bg-rose-500/15 text-rose-600', text: '柔性物体、线缆插拔和毫米级力控在仿真里永远失真，必须靠高质量遥操作真机数据回流。' }
+          ],
+          classicAnswers: [
+            { author: '具身智能控制工程师', votes: '5,240 赞同', excerpt: '“仿真跑通只完成 30%，真正让机器人不摔跤的是把真实电机的扭矩-延迟曲线标定进仿真器。”', url: 'https://www.zhihu.com/search?type=content&q=Sim2Real+%E8%B8%A9%E5%9D%91' }
+          ],
+          risingAnswers: [
+            { author: '深圳灵巧手创业者 · 6 天前', votes: '195 赞同 · 潜力黑马', excerpt: '“在华强北把微力传感器打到百元级后，用 Real2Sim2Real 闭环两周就把装配成功率从 41% 拉到 89%。”', url: 'https://www.zhihu.com/search?type=content&q=Real2Sim2Real+%E7%81%B5%E5%B7%A7%E6%89%8B' }
+          ],
+          zhida: '结合本页大湾区产线语境：单纯追求仿真画质已边际递减，胜负手在于用低成本传感器打通“真机失败→反哺仿真”的飞轮。'
+        },
+        {
+          id: 'OPC 一人公司',
+          aliases: ['opc', '一人公司', '港深创科园', '大湾区', '48 小时'],
+          term: 'OPC 一人公司与湾区共创',
+          votes: '7.4k 赞同提炼',
+          analogy: '以前创业要招齐产研设运；现在是一个人类老板带一排 AI Agent 员工，一台笔记本就是一支满编小分队。',
+          contextRole: '当前专题聚焦大湾区青年开发者如何借助 AI 编程与双城协同，在 48 小时内验证小而美产品。',
+          evidence: { total: 15, practical: 5, counter: 5, filtered: 5, risingSignal: '已筛出 2 天前港深黑客松冠军复盘潜力回答' },
+          perspectives: [
+            { stance: '拥抱派 · 杠杆红利', cls: 'bg-emerald-500/15 text-emerald-700', text: '零沟通内耗 + 全球分发，一个人就能把垂直工具做到月入数万美元。' },
+            { stance: '泼冷水 · 幸存者偏差', cls: 'bg-rose-500/15 text-rose-600', text: '“AI 帮你省了写代码的 80% 时间，但冷启动获客、信任建立和售后分发，AI 替不了你。”' }
+          ],
+          classicAnswers: [
+            { author: '深圳独立开发者', votes: '7,410 赞同', excerpt: '“别一上来就做大而全的 SaaS，先在社区里解决一个具体到让人愿意立刻点开的痛点。”', url: 'https://www.zhihu.com/search?type=content&q=%E4%B8%80%E4%BA%BA%E5%85%AC%E5%8F%B8+OPC+AI' }
+          ],
+          risingAnswers: [
+            { author: '港深跨境黑客松冠军 · 2 天前', votes: '142 赞同 · 潜力黑马', excerpt: '“单人打比赛最怕贪大，把一个极窄交互打磨到评委 30 秒内‘哇’一声，比做十个半成品管用得多。”', url: 'https://www.zhihu.com/search?type=content&q=%E5%8D%95%E4%BA%BA+%E9%BB%91%E5%AE%A2%E6%9D%BE+%E5%86%A0%E5%86%9B' }
+          ],
+          zhida: '结合知乎黑客松 S3 湾区共创季：单人 48 小时交付的核心就是聚焦单一杀手级体验，并用零安装沙盒放大社区传播。'
+        }
+      ];
+
+      // English academic dictionary for concrete complex-sentence breakdown (Zero generic boilerplate!)
+      const EN_GLOSSARY = {
+        'deploying': '部署上线', 'streaming': '流式实时输出', 'multi-turn': '多轮对话', 'agentic': '智能体自主执行',
+        'constrained': '受限于/卡脖子', 'footprint': '占用体积', 'scales': '规模扩展', 'naive': '朴素/简单粗暴的',
+        'sliding-window': '滑动窗口', 'eviction': '驱逐淘汰旧数据', 'perplexity': '困惑度（越低越通顺）', 'collapse': '雪崩/崩溃',
+        'mechanistic': '机制层面的', 'interpretability': '可解释性', 'autoregressive': '自回归（逐字生成）',
+        'disproportionate': '不成比例的/极度偏斜的', 'preserving': '固定保留', 'alongside': '连同……一起',
+        'infinite-length': '无限长度', 'fine-tuning': '重新微调训练', 'allocate': '分配'
+      };
+
+      // ==================== 2. 5 READING SCENARIO PAGES ====================
+      const PAGES = {
+        paper: {
+          domainName: '英文学术论文',
+          isDark: false,
+          hotCount: 9,
+          hotKey: 'Attention Sink',
+          dwellAnchor: 'Attention Sink',
+          dwellSentence: 'Recent mechanistic interpretability studies reveal that autoregressive Transformers consistently allocate disproportionate attention scores to initial tokens—a phenomenon known as Attention Sink.',
+          url: 'https://arxiv.org/html/2611.04821 — Efficient Long-Context Inference',
+          html:
+            '<div class="max-w-3xl mx-auto">' +
+              '<div class="text-xs font-mono-code text-slate-400 mb-2">arXiv:2611.04821 [cs.CL] · 试着拖选任意一整句英文长难句，或先点 KV Cache 再去「财报研报」页再点一次体验跨页记忆串联！</div>' +
+              '<h2 class="text-xl sm:text-2xl font-bold text-slate-900 mb-4 leading-snug">Sink-Aware Memory Compression for Ultra-Long Context Transformers</h2>' +
+              '<p class="text-sm sm:text-base text-slate-700 leading-relaxed mb-4">' +
+                'Deploying Large Language Models in streaming and multi-turn agentic workflows is fundamentally constrained by the memory footprint of the ' +
+                '<span class="term-hl" data-term="KV Cache">KV Cache</span>. As context length scales beyond 128K tokens, naive sliding-window eviction leads to severe perplexity collapse.' +
+              '</p>' +
+              '<p class="text-sm sm:text-base text-slate-700 leading-relaxed mb-4">' +
+                'Recent mechanistic interpretability studies reveal that autoregressive Transformers consistently allocate disproportionate attention scores to initial tokens—a phenomenon known as ' +
+                '<span class="term-hl" data-term="Attention Sink">Attention Sink</span>. Preserving these initial sink states alongside local window tokens enables stable infinite-length generation without fine-tuning.' +
+              '</p>' +
+            '</div>'
+        },
+        code: {
+          domainName: 'PyTorch / CUDA 报错日志',
+          isDark: true,
+          hotCount: 14,
+          hotKey: 'CUDA out of memory',
+          dwellAnchor: 'CUDA out of memory',
+          dwellSentence: 'torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 512.00 MiB... (including KV Cache buffers).',
+          url: 'terminal://localhost/train_ddp.py — PyTorch 2.6 Training Log',
+          html:
+            '<div class="max-w-3xl mx-auto">' +
+              '<div class="text-xs font-mono-code text-slate-400 mb-2">深色终端场景 · 若你刚才在论文页看过 KV Cache，这里点击 KV Cache 会立刻触发跨页记忆串联</div>' +
+              '<div class="rounded-xl bg-slate-950 text-slate-200 p-4 sm:p-5 font-mono-code text-xs sm:text-[13px] leading-relaxed overflow-x-auto">' +
+                '<div class="text-slate-400">Epoch 3/20 | Step 1420 | loss=0.4128 | lr=2.5e-5</div>' +
+                '<div class="text-rose-400 mt-3 font-semibold">Traceback (most recent call last):</div>' +
+                '<div class="pl-3 text-slate-300">File "train_ddp.py", line 218, in evaluate_model</div>' +
+                '<div class="pl-6 text-slate-100">outputs = model(input_ids, use_cache=True)</div>' +
+                '<div class="mt-2 text-rose-300">torch.OutOfMemoryError: <span class="code-term-hl" data-term="CUDA out of memory">CUDA out of memory</span>. Tried to allocate 512.00 MiB. Process 19482 has 23.12 GiB memory in use (including <span class="code-term-hl" data-term="KV Cache">KV Cache</span> buffers).</div>' +
+              '</div>' +
+            '</div>'
+        },
+        finance: {
+          domainName: '科技巨头财报研报',
+          isDark: false,
+          hotCount: 6,
+          hotKey: 'CapEx 资本开支',
+          dwellAnchor: 'CapEx 资本开支',
+          dwellSentence: '本季度北美与国内头部云厂商合计 CapEx 资本开支同比增长 48%，市场开始追踪折旧压力与自由现金流转化效率。',
+          url: 'https://ir.cloud-research.example/q3-2026-earnings-brief',
+          html:
+            '<div class="max-w-3xl mx-auto">' +
+              '<div class="text-xs font-mono-code text-slate-400 mb-2">2026 Q3 科技巨头季报速读 · 点击下方 KV Cache 检验“论文 → 财报”跨页记忆串联</div>' +
+              '<h2 class="text-xl font-bold text-slate-900 mb-4">云厂商 AI 基础设施投入创历史新高，资本开支回报周期成焦点</h2>' +
+              '<p class="text-sm sm:text-base text-slate-700 leading-relaxed mb-4">' +
+                '本季度北美与国内头部云厂商合计 <span class="term-hl" data-term="CapEx 资本开支">CapEx 资本开支</span> 同比增长 48%，市场开始密切追踪未来四个季度的折旧压力与自由现金流转化效率。' +
+              '</p>' +
+              '<p class="text-sm sm:text-base text-slate-700 leading-relaxed">' +
+                '管理层强调，推理侧通过软硬协同与 <span class="term-hl" data-term="KV Cache">KV Cache</span> 压缩技术，已将百万 Token 推理成本同比降低 62%，有助于缓解毛利率短期承压。' +
+              '</p>' +
+            '</div>'
+        },
+        news: {
+          domainName: '具身智能前沿新闻',
+          isDark: false,
+          hotCount: 11,
+          hotKey: 'Sim2Real',
+          dwellAnchor: 'Sim2Real',
+          dwellSentence: '团队普遍卡在 Sim2Real 迁移鸿沟上——仿真中丝滑的抓取动作，到了真机往往因为毫米级力控偏差而翻车。',
+          url: 'https://tech-insider.example/2026/11/embodied-ai-breakthrough',
+          html:
+            '<div class="max-w-3xl mx-auto">' +
+              '<div class="text-xs font-mono-code text-slate-400 mb-2">前沿科技观察 · 点击 L2 看证据构成条与仿真派/真机派交锋</div>' +
+              '<h2 class="text-xl font-bold text-slate-900 mb-4">从实验室走向产线：具身智能如何跨越最后一公里？</h2>' +
+              '<p class="text-sm sm:text-base text-slate-700 leading-relaxed mb-4">' +
+                '人形机器人与灵巧手在仿真环境中操作成功率大幅跃升，但部署到真实产线时，团队普遍卡在 <span class="term-hl" data-term="Sim2Real">Sim2Real</span> 迁移鸿沟上——往往因为毫米级力控偏差而翻车。' +
+              '</p>' +
+            '</div>'
+        },
+        gba: {
+          domainName: '大湾区共创专题',
+          isDark: false,
+          hotCount: 12,
+          hotKey: 'OPC 一人公司',
+          dwellAnchor: 'OPC 一人公司',
+          dwellSentence: '越来越多高校学生与工程师依托 AI 编程组建 OPC 一人公司，在 48 小时内把痛点变成可运行原型。',
+          url: 'https://gba-co-create.zhihu.com/s3-special-glossary',
+          html:
+            '<div class="max-w-3xl mx-auto">' +
+              '<div class="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 mb-2">🌉 知乎黑客松 S3 · 湾区共创季彩蛋</div>' +
+              '<h2 class="text-xl font-bold text-slate-900 mb-4">2026 粤港澳大湾区青年开发者图鉴：一人公司与双城共创</h2>' +
+              '<p class="text-sm sm:text-base text-slate-700 leading-relaxed mb-4">' +
+                '在深圳南山与香港科学园之间，越来越多开发者依托 AI 编程组建 <span class="term-hl" data-term="OPC 一人公司">OPC 一人公司</span>，上午在港深创科园跑通算法，下午在深圳完成云端部署。' +
+              '</p>' +
+            '</div>'
+        }
+      };
+
+      // ==================== 3. LOCAL 7-DAY / 20-TERM MEMORY STORE ====================
+      function loadMemory() {
+        try {
+          const raw = localStorage.getItem(MEMORY_STORAGE_KEY);
+          if (!raw) return [];
+          const arr = JSON.parse(raw);
+          const now = Date.now();
+          return Array.isArray(arr) ? arr.filter(x => now - x.ts <= SEVEN_DAYS_MS).slice(0, MAX_MEMORY_ITEMS) : [];
+        } catch (e) { return []; }
+      }
+
+      function saveMemory(arr) {
+        try {
+          localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(arr.slice(0, MAX_MEMORY_ITEMS)));
+        } catch (e) {}
+      }
+
+      let termMemory = loadMemory();
+      let currentTab = 'paper';
+      let pendingSelection = null;
+      let currentResolved = null;
+      let quotaSearch = 0;
+      let quotaZhida = 0;
+      let cacheHits = 0;
+      const localCache = new Set();
+      let streamTimer = null;
+      let mobileMode = false;
+
+      // DOM refs
+      const browserShell = document.getElementById('browser-shell');
+      const viewport = document.getElementById('reading-viewport');
+      const fakeUrl = document.getElementById('fake-url');
+      const pageHotLabel = document.getElementById('page-hot-label');
+      const petLayer = document.getElementById('corner-pet-layer');
+      const petCapsule = document.getElementById('pet-capsule');
+      const capsuleInner = document.getElementById('capsule-inner');
+      const capsuleTermLabel = document.getElementById('capsule-term-label');
+      const bubble = document.getElementById('knowledge-bubble');
+      const crossPageBanner = document.getElementById('cross-page-banner');
+      const crossPageText = document.getElementById('cross-page-text');
+      const zhidaBox = document.getElementById('kb-zhida-box');
+      const zhidaText = document.getElementById('kb-zhida-text');
+      const zhidaStatus = document.getElementById('kb-zhida-status');
+      const toastEl = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+
+      let toastTimer = null;
+      function showToast(msg) {
+        toastMsg.textContent = msg;
+        toastEl.classList.remove('opacity-0', '-translate-y-2');
+        toastEl.classList.add('opacity-100', 'translate-y-0');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastEl.classList.add('opacity-0', '-translate-y-2');
+          toastEl.classList.remove('opacity-100', 'translate-y-0');
+        }, 2300);
+      }
+
+      function recordTermTo7DayMemory(key, termTitle, analogy, pageTab, pageName) {
+        const now = Date.now();
+        // Check if seen on a DIFFERENT page before!
+        const priorCross = termMemory.find(m => m.key === key && m.pageTab !== pageTab);
+        // Update/prepend entry (keep max 20 within 7 days)
+        const filtered = termMemory.filter(m => !(m.key === key && m.pageTab === pageTab));
+        filtered.unshift({ key, term: termTitle, analogy, pageTab, pageName, ts: now });
+        termMemory = filtered.filter(x => now - x.ts <= SEVEN_DAYS_MS).slice(0, MAX_MEMORY_ITEMS);
+        saveMemory(termMemory);
+        updateVaultUI();
+        return priorCross;
+      }
+
+      function updateVaultUI() {
+        document.getElementById('q-search').textContent = String(quotaSearch);
+        document.getElementById('q-zhida').textContent = String(quotaZhida);
+        document.getElementById('q-cache').textContent = String(cacheHits);
+        document.getElementById('header-mem-count').textContent = String(termMemory.length);
+        document.getElementById('vault-count').textContent = String(termMemory.length);
+
+        const petBadge = document.getElementById('pet-mem-badge');
+        petBadge.textContent = String(termMemory.length);
+        petBadge.classList.toggle('hidden', termMemory.length === 0);
+
+        const list = document.getElementById('vault-list');
+        if (!termMemory.length) {
+          list.innerHTML = '<div class="p-3 rounded-xl bg-slate-50 text-slate-400 italic">暂无沉淀术语。划选任意词句或点击页面术语，系统会自动记录最近 7 天最多 20 条跨页记忆。</div>';
+        } else {
+          list.innerHTML = termMemory.map(m => {
+            const d = new Date(m.ts);
+            const timeStr = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            return (
+              '<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">' +
+                '<div class="flex items-center justify-between gap-2 mb-1">' +
+                  '<span class="font-bold text-slate-900">' + m.term + '</span>' +
+                  '<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-[#0044B3] font-medium">' + m.pageName + ' · ' + timeStr + '</span>' +
+                '</div>' +
+                '<p class="text-slate-600 leading-relaxed">' + m.analogy + '</p>' +
+              '</div>'
+            );
+          }).join('');
+        }
+      }
+
+      function applyHostTheme(isDark) {
+        bubble.classList.toggle('glass-dark', isDark);
+        bubble.classList.toggle('glass-light', !isDark);
+        capsuleInner.classList.toggle('glass-dark', isDark);
+        capsuleInner.classList.toggle('glass-light', !isDark);
+      }
+
+      function setPetMood(mode) {
+        const ears = document.getElementById('ks-ears');
+        petLayer.classList.remove('pet-periphery', 'pet-ready');
+        ears.classList.remove('ks-ear-perk');
+        if (mode === 'ready' || mode === 'peek') {
+          petLayer.classList.add('pet-ready');
+          if (mode === 'ready') ears.classList.add('ks-ear-perk');
+        } else {
+          petLayer.classList.add('pet-periphery');
+        }
+      }
+
+      // ==================== 4. CONCRETE ENGLISH COMPLEX-SENTENCE PARSER + KB RESOLVER ====================
+      function cleanQuery(raw) {
+        return raw
+          .replace(/0x[0-9a-f]+/gi, '')
+          .replace(/\b\d+(\.\d+)?\s*(MiB|GiB|MB|GB)\b/gi, '')
+          .replace(/["'“”‘’()[\]{},;:]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 34) || raw.trim().slice(0, 24);
+      }
+
+      function parseEnglishComplexSentence(raw) {
+        const lower = raw.toLowerCase();
+        const foundGloss = [];
+        Object.keys(EN_GLOSSARY).forEach(k => {
+          if (lower.includes(k)) foundGloss.push('<strong>' + k + '</strong>（' + EN_GLOSSARY[k] + '）');
+        });
+        let coreLogic = '';
+        if (/leads to|enables|causes|results in/.test(lower)) {
+          coreLogic = '这是一句典型的<strong>因果机制句</strong>：前半段描述具体操作/架构变化，后半段指出它直接引发的性能或稳定性结果。';
+        } else if (/constrained by|limited by/.test(lower)) {
+          coreLogic = '这是一句<strong>瓶颈定义句</strong>：直接点明了系统在规模放大时真正卡脖子的核心资源约束。';
+        } else if (/reveal that|show that/.test(lower)) {
+          coreLogic = '这是一句<strong>实验发现句</strong>：总结研究者解剖模型内部后观察到的反直觉规律。';
+        } else {
+          coreLogic = '这句话在论证中交代了关键前提与工程约束，拆开核心术语后主干一目了然。';
+        }
+        return { foundGloss, coreLogic };
+      }
+
+      function resolveKnowledge(rawText, contextSentence) {
+        const raw = rawText.trim();
+        const lower = raw.toLowerCase();
+        const cleaned = cleanQuery(raw);
+        const isLongEnglish = /^[A-Za-z0-9\s\-_.,:;()'"/—]+$/.test(raw) && raw.split(/\s+/).length >= 5;
+
+        const matched = KB.filter(item =>
+          item.aliases.some(a => lower.includes(a) || (raw.length >= 3 && a.includes(lower)))
+        );
+
+        // If user selected a long English complex sentence: provide CONCRETE clause + glossary breakdown!
+        if (isLongEnglish) {
+          const parsed = parseEnglishComplexSentence(raw);
+          const anchorKb = matched[0];
+          const glossHtml = parsed.foundGloss.length
+            ? '<strong>关键词逐词拆解：</strong>' + parsed.foundGloss.slice(0, 5).join(' · ')
+            : '<strong>主干提取：</strong>核心关键词为 <code>' + cleaned + '</code>';
+          return {
+            key: anchorKb ? anchorKb.id : cleaned,
+            rawText: raw,
+            contextSentence: contextSentence || raw,
+            isSentenceBreakdown: true,
+            data: {
+              term: '英文长难句精解' + (anchorKb ? ' · ' + anchorKb.id : ''),
+              votes: anchorKb ? anchorKb.votes : '语境结构拆解',
+              analogy: anchorKb
+                ? ('人话直译 + 比喻：' + anchorKb.analogy)
+                : ('人话直译：这句话说白了就是——围绕「' + cleaned + '」的约束条件，解释为什么朴素做法会失效以及新机制如何绕开瓶颈。'),
+              contextRole: parsed.coreLogic + '<br /><div class="mt-1.5">' + glossHtml + '</div>',
+              evidence: anchorKb ? anchorKb.evidence : { total: 10, practical: 4, counter: 3, filtered: 3, risingSignal: '已按论文复现密度筛出近期知乎精读讨论' },
+              perspectives: anchorKb ? anchorKb.perspectives : [
+                { stance: '论文动机', cls: 'bg-blue-500/15 text-blue-700', text: '这类长句通常在 Abstract 或 Intro 用来立靶子，先确认它批判的旧方法局限在哪。' },
+                { stance: '工程泼冷水', cls: 'bg-rose-500/15 text-rose-600', text: '知乎论文精读区常提醒：注意原文是否附带“without fine-tuning”或特定数据集假设，别盲目外推。' }
+              ],
+              classicAnswers: anchorKb ? anchorKb.classicAnswers : [
+                { author: '知乎论文精读检索', votes: '直达高赞', excerpt: '前往知乎查看关于「' + cleaned + '」的中文深度精读与复现笔记。', url: 'https://www.zhihu.com/search?type=content&q=' + encodeURIComponent(cleaned) + '+%E8%AE%BA%E6%96%87+%E8%A7%A3%E8%AF%BB' }
+              ],
+              risingAnswers: anchorKb ? anchorKb.risingAnswers : [
+                { author: '知乎近期复现黑马检索', votes: '7 天内新锐', excerpt: '查看近期一线研究者对「' + cleaned + '」的复现踩坑与代码实测。', url: 'https://www.zhihu.com/search?type=content&q=' + encodeURIComponent(cleaned) + '+%E5%A4%8D%E7%8E%B0+%E8%B8%A9%E5%9D%91' }
+              ],
+              zhida: (anchorKb ? anchorKb.zhida : '直答 Agent 语境解析：你划选的英文长句聚焦于「' + cleaned + '」，建议结合上述逐词拆解先抓主干因果，再对照知乎精读回答核对实验边界。')
+            }
+          };
+        }
+
+        if (matched.length >= 1) {
+          const m = matched[0];
+          return { key: m.id, rawText: raw, contextSentence: contextSentence || '', isSentenceBreakdown: false, data: m };
+        }
+
+        const domainName = (PAGES[currentTab] && PAGES[currentTab].domainName) || '当前网页';
+        const enc = encodeURIComponent(cleaned);
+        return {
+          key: cleaned,
+          rawText: raw,
+          contextSentence: contextSentence || '',
+          isSentenceBreakdown: false,
+          data: {
+            term: '语境解析：' + cleaned,
+            votes: '双路改写 · 实时聚合',
+            analogy: '在「' + domainName + '」里读「' + cleaned + '」，抓住它在这句话里扮演的是“瓶颈原因”还是“破局手段”，就能立刻接上知乎一线实操讨论。',
+            contextRole: '当前段落上下文' + (contextSentence ? '（“' + contextSentence.slice(0, 52) + '…”）' : '') + '中，它属于核心约束节点。',
+            evidence: { total: 11, practical: 4, counter: 3, filtered: 4, risingSignal: '已按信息密度过滤 4 条纯情绪短评' },
+            perspectives: [
+              { stance: '支持 · 正向共识', cls: 'bg-emerald-500/15 text-emerald-700', text: '知乎主流科普区通常从核心原理切入，强调「' + cleaned + '」在理想条件下的增益。' },
+              { stance: '质疑 · 打破茧房', cls: 'bg-rose-500/15 text-rose-600', text: '一线实操答主往往补充反面案例与前提限制，避免被单一视角带偏。' }
+            ],
+            classicAnswers: [
+              { author: '知乎高赞通俗解读', votes: '直达高赞', excerpt: '前往知乎查看关于「' + cleaned + '」的高赞经典回答与入门比喻。', url: 'https://www.zhihu.com/search?type=content&q=' + enc + '+%E9%80%9A%E4%BF%97' }
+            ],
+            risingAnswers: [
+              { author: '知乎新锐潜力回答', votes: '按最新/高密度', excerpt: '挖掘近期关于「' + cleaned + '」的一线实测与反直觉黑马观点。', url: 'https://www.zhihu.com/search?type=content&q=' + enc + '+%E5%AE%9E%E6%B5%8B+%E8%B8%A9%E5%9D%91' }
+            ],
+            zhida: '结合当前「' + domainName + '」段落：你选中的「' + cleaned + '」建议从 L1 直觉入手，再对照 L2 正反方观点核对边界条件。'
+          }
+        };
+      }
+
+      // ==================== 5. CURSOR-ANCHORED CAPSULE & 3-PILLAR CARD ====================
+      function positionNearRect(el, rect, preferAbove) {
+        const w = el.offsetWidth || 360;
+        const h = Math.min(el.offsetHeight || 280, window.innerHeight * 0.65);
+        let left = rect.left + rect.width / 2 - w / 2;
+        left = Math.max(12, Math.min(window.innerWidth - w - 12, left));
+        let top = preferAbove ? (rect.top - h - 10) : (rect.bottom + 10);
+        if (preferAbove && top < 60) top = rect.bottom + 10;
+        if (!preferAbove && top + h > window.innerHeight - 16) top = Math.max(60, rect.top - h - 10);
+        el.style.left = left + 'px';
+        el.style.top = top + 'px';
+      }
+
+      function showCapsuleAtRect(rawText, contextSentence, anchorRect) {
+        const rect = anchorRect || document.getElementById('pet-svg-btn').getBoundingClientRect();
+        pendingSelection = { rawText, contextSentence, anchorRect: rect };
+        bubble.classList.add('hidden');
+        applyHostTheme(Boolean(PAGES[currentTab] && PAGES[currentTab].isDark));
+        capsuleTermLabel.textContent = cleanQuery(rawText);
+        petCapsule.classList.remove('hidden');
+        positionNearRect(petCapsule, rect, true);
+        setPetMood('ready');
+      }
+
+      function switchKbLayer(layer) {
+        ['l1', 'l2', 'l3'].forEach(l => {
+          document.getElementById('panel-' + l).classList.toggle('hidden', l !== layer);
+        });
+        document.querySelectorAll('.kb-tab').forEach(btn => {
+          const active = btn.dataset.layer === layer;
+          btn.className = 'kb-tab flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition ' + (
+            active ? 'bg-[#0066FF] text-white' : 'bg-slate-500/10 opacity-80 hover:opacity-100'
+          );
+        });
+      }
+
+      function streamTextInto(el, fullText, onDone) {
+        if (streamTimer) clearInterval(streamTimer);
+        el.textContent = '';
+        let idx = 0;
+        streamTimer = setInterval(() => {
+          idx += 4;
+          el.textContent = fullText.slice(0, idx);
+          if (idx >= fullText.length) {
+            clearInterval(streamTimer);
+            streamTimer = null;
+            if (onDone) onDone();
+          }
+        }, 20);
+      }
+
+      function openCardAtRect(rawText, contextSentence, initialLayer, anchorRect) {
+        petCapsule.classList.add('hidden');
+        const resolved = resolveKnowledge(rawText, contextSentence);
+        currentResolved = resolved;
+        const { key, data } = resolved;
+        const curPageName = (PAGES[currentTab] && PAGES[currentTab].domainName) || '当前网页';
+
+        applyHostTheme(Boolean(PAGES[currentTab] && PAGES[currentTab].isDark));
+
+        // 7-Day Cross-Page Memory Check & Record!
+        const priorCross = recordTermTo7DayMemory(key, data.term, data.analogy, currentTab, curPageName);
+        if (priorCross) {
+          crossPageText.textContent = '你之前在「' + priorCross.pageName + '」刚读过「' + key + '」，今天它在「' + curPageName + '」里再次出现，已为你自动串联上下文！';
+          crossPageBanner.classList.remove('hidden');
+        } else {
+          crossPageBanner.classList.add('hidden');
+        }
+
+        // Quota & Cache Accounting
+        const isHit = localCache.has(key);
+        if (isHit) {
+          cacheHits += 1;
+          document.getElementById('kb-meta-badge').textContent = '命中本地缓存 · 0 API 消耗';
+        } else {
+          localCache.add(key);
+          quotaSearch += 2;
+          document.getElementById('kb-meta-badge').textContent = '知乎双路检索命中 · 直答消耗 0 次';
+        }
+        updateVaultUI();
+
+        // Populate L1
+        document.getElementById('kb-term').textContent = data.term;
+        document.getElementById('kb-l1-title').textContent = resolved.isSentenceBreakdown ? '🧩 英文长难句精解' : '🎨 形象化神比喻';
+        document.getElementById('kb-l1-votes').textContent = data.votes;
+        document.getElementById('kb-analogy').textContent = data.analogy;
+        document.getElementById('kb-context-role').innerHTML = data.contextRole;
+
+        // Populate L2 Evidence Composition Bar + Perspectives
+        const ev = data.evidence;
+        const pPct = Math.round((ev.practical / ev.total) * 100);
+        const cPct = Math.round((ev.counter / ev.total) * 100);
+        const fPct = Math.max(0, 100 - pPct - cPct);
+        document.getElementById('ev-summary-l2').textContent = '检索 ' + ev.total + ' 条 · 过滤 ' + ev.filtered + ' 条纯情绪';
+        document.getElementById('ev-bar-prac').style.width = pPct + '%';
+        document.getElementById('ev-bar-counter').style.width = cPct + '%';
+        document.getElementById('ev-bar-filtered').style.width = fPct + '%';
+        document.getElementById('ev-legend-l2').innerHTML =
+          '<span class="text-emerald-700 font-medium">● 一线实测 ' + ev.practical + ' 条</span>' +
+          '<span class="text-rose-600 font-medium">● 反方质疑 ' + ev.counter + ' 条</span>' +
+          '<span>● 已过滤情绪水贴 ' + ev.filtered + ' 条</span>';
+
+        document.getElementById('kb-perspectives-list').innerHTML = data.perspectives.map(p =>
+          '<div class="p-2.5 rounded-xl bg-slate-500/10 text-xs leading-relaxed">' +
+            '<span class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 ' + p.cls + '">' + p.stance + '</span>' +
+            '<span>' + p.text + '</span>' +
+          '</div>'
+        ).join('');
+
+        // Populate L3 Evidence Signal + Classic vs Rising Answers
+        document.getElementById('ev-summary-l3').textContent = '📊 ' + ev.risingSignal;
+        const renderAns = (arr) => arr.map(a =>
+          '<a href="' + a.url + '" target="_blank" rel="noopener noreferrer" class="block p-2.5 rounded-xl bg-slate-500/5 hover:bg-blue-500/10 border border-slate-400/20 transition">' +
+            '<div class="flex items-center justify-between text-[11px] mb-1">' +
+              '<span class="font-semibold">' + a.author + '</span>' +
+              '<span class="font-mono-code text-[10px] text-[#0066FF] font-semibold">' + a.votes + ' ↗</span>' +
+            '</div>' +
+            '<p class="text-xs opacity-80 leading-relaxed">' + a.excerpt + '</p>' +
+          '</a>'
+        ).join('');
+        document.getElementById('kb-classic-answers').innerHTML = renderAns(data.classicAnswers);
+        document.getElementById('kb-rising-answers').innerHTML = renderAns(data.risingAnswers);
+
+        zhidaBox.classList.add('hidden');
+        zhidaText.textContent = '';
+
+        switchKbLayer(initialLayer || 'l1');
+        bubble.classList.remove('hidden');
+        positionNearRect(bubble, anchorRect || document.getElementById('pet-svg-btn').getBoundingClientRect(), false);
+        setPetMood('peek');
+      }
+
+      // Capsule triggers
+      document.getElementById('cap-btn-l1').addEventListener('click', () => {
+        if (pendingSelection) openCardAtRect(pendingSelection.rawText, pendingSelection.contextSentence, 'l1', pendingSelection.anchorRect);
+      });
+      document.getElementById('cap-btn-l2').addEventListener('click', () => {
+        if (pendingSelection) openCardAtRect(pendingSelection.rawText, pendingSelection.contextSentence, 'l2', pendingSelection.anchorRect);
+      });
+      document.getElementById('cap-btn-l3').addEventListener('click', () => {
+        if (pendingSelection) openCardAtRect(pendingSelection.rawText, pendingSelection.contextSentence, 'l3', pendingSelection.anchorRect);
+      });
+      document.getElementById('cap-btn-close').addEventListener('click', () => {
+        petCapsule.classList.add('hidden');
+        setPetMood('idle');
+      });
+
+      document.querySelectorAll('.kb-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchKbLayer(btn.dataset.layer));
+      });
+      document.getElementById('btn-close-bubble').addEventListener('click', () => {
+        if (streamTimer) clearInterval(streamTimer);
+        bubble.classList.add('hidden');
+        setPetMood('idle');
+      });
+
+      document.getElementById('btn-trigger-zhida').addEventListener('click', () => {
+        if (!currentResolved) return;
+        if (zhidaBox.classList.contains('hidden')) {
+          quotaZhida += 1;
+          updateVaultUI();
+          zhidaBox.classList.remove('hidden');
+          zhidaStatus.textContent = '流式生成中…';
+          streamTextInto(zhidaText, currentResolved.data.zhida, () => { zhidaStatus.textContent = '已锚定当前段落'; });
+        }
+      });
+
+      document.getElementById('zhida-followup-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const inp = document.getElementById('zhida-followup-input');
+        const q = inp.value.trim();
+        if (!q || !currentResolved) return;
+        inp.value = '';
+        quotaZhida += 1;
+        updateVaultUI();
+        zhidaStatus.textContent = '追问生成中…';
+        const reply = '【直答追问 · ' + currentResolved.key + '】\n针对「' + q + '」：结合本页上下文与 L2 多元立场，建议先核实前提条件，再参考 L3 潜力实测回答验证边界。';
+        streamTextInto(zhidaText, reply, () => { zhidaStatus.textContent = '追问已完成'; });
+      });
+
+      // Explicit Save to Glossary button (confirms already saved in 7-day memory & opens toast)
+      document.getElementById('btn-save-glossary').addEventListener('click', () => {
+        if (!currentResolved) return;
+        showToast('📚 「' + currentResolved.key + '」已收录进近 7 天跨页术语本（共 ' + termMemory.length + '/20 条）');
+      });
+
+      // ==================== 6. VAULT MODAL & ZHIHU IDEA GENERATOR ====================
+      const vaultModal = document.getElementById('vault-modal');
+      const ideaBox = document.getElementById('zhihu-idea-box');
+      const ideaText = document.getElementById('zhihu-idea-text');
+
+      function openVault() {
+        updateVaultUI();
+        vaultModal.classList.remove('hidden');
+        vaultModal.classList.add('flex');
+      }
+      function closeVault() {
+        vaultModal.classList.add('hidden');
+        vaultModal.classList.remove('flex');
+      }
+
+      document.getElementById('btn-open-vault').addEventListener('click', openVault);
+      document.getElementById('pet-svg-btn').addEventListener('click', openVault);
+      document.getElementById('btn-close-vault').addEventListener('click', closeVault);
+      document.getElementById('btn-close-vault-2').addEventListener('click', closeVault);
+
+      document.getElementById('btn-copy-md').addEventListener('click', () => {
+        if (!termMemory.length) { showToast('先划选 1 个术语再导出哦'); return; }
+        const md = '# 桌边看山 · 近 7 天跨页阅读术语本\n\n' +
+          termMemory.map(m => '- **' + m.term + '**（来源：' + m.pageName + '）：' + m.analogy).join('\n');
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(md);
+          showToast('术语本 Markdown 已复制，可直接粘贴到 Notion / Obsidian');
+        } catch (e) { showToast('Markdown 已准备好'); }
+      });
+
+      document.getElementById('btn-clear-memory').addEventListener('click', () => {
+        termMemory = [];
+        saveMemory(termMemory);
+        ideaBox.classList.add('hidden');
+        updateVaultUI();
+        showToast('已清空本地 7 天术语记忆');
+      });
+
+      document.getElementById('btn-gen-idea').addEventListener('click', () => {
+        if (!termMemory.length) { showToast('先在页面划选 1–2 个术语，再生成知乎想法~'); return; }
+        const topItems = termMemory.slice(0, 3);
+        const pagesList = Array.from(new Set(topItems.map(x => x.pageName))).join('、');
+        const lines = topItems.map((m, i) => (i + 1) + '. 【' + m.key + '】' + m.analogy).join('\n');
+        ideaText.value =
+          '刚用「桌边看山」边读' + pagesList + '边随手记了几个特别通透的知乎视角，分享给同路人：\n\n' +
+          lines + '\n\n' +
+          '把外部硬核资料和知乎一线实测对照着看，真的比只看单一来源少踩一半坑。大家最近读论文/看研报还遇到过哪些反直觉的概念？欢迎评论区接龙~\n' +
+          '#桌边看山伴读笔记 #知乎好内容';
+        ideaBox.classList.remove('hidden');
+      });
+
+      document.getElementById('btn-copy-idea').addEventListener('click', () => {
+        ideaText.select();
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ideaText.value);
+          else document.execCommand('copy');
+          showToast('知乎想法文案已复制，可直接发回知乎社区！');
+        } catch (e) {
+          document.execCommand('copy');
+          showToast('知乎想法文案已复制！');
+        }
+      });
+
+      // ==================== 7. TABS & SELECTION ====================
+      function renderPage(tabKey) {
+        currentTab = tabKey;
+        const page = PAGES[tabKey] || PAGES.paper;
+        fakeUrl.textContent = page.url;
+        pageHotLabel.textContent = '知乎有 ' + page.hotCount + ' 条热议';
+        viewport.innerHTML = page.html;
+
+        viewport.querySelectorAll('[data-term]').forEach(el => {
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const sel = window.getSelection();
+            if (sel && !sel.isCollapsed && sel.toString().trim().length > 2) return;
+            const para = el.closest('p, div') ? el.closest('p, div').textContent.trim() : '';
+            openCardAtRect(el.dataset.term, para, 'l1', el.getBoundingClientRect());
+          });
+        });
+
+        document.querySelectorAll('.browser-tab').forEach(btn => {
+          const active = btn.dataset.tab === tabKey;
+          btn.className = 'browser-tab px-3.5 py-2 rounded-t-xl text-xs whitespace-nowrap transition ' + (
+            active
+              ? 'font-semibold bg-white text-slate-900 border-t border-x border-slate-200'
+              : 'font-medium text-slate-600 hover:bg-slate-200/70'
+          );
+        });
+      }
+
+      document.querySelectorAll('.browser-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.tab === currentTab) return;
+          bubble.classList.add('hidden');
+          petCapsule.classList.add('hidden');
+          renderPage(btn.dataset.tab);
+        });
+      });
+
+      document.getElementById('btn-page-hot').addEventListener('click', (e) => {
+        const page = PAGES[currentTab] || PAGES.paper;
+        openCardAtRect(page.hotKey, page.dwellSentence, 'l2', e.currentTarget.getBoundingClientRect());
+      });
+
+      document.getElementById('btn-sim-dwell').addEventListener('click', () => {
+        const page = PAGES[currentTab] || PAGES.paper;
+        showCapsuleAtRect(page.dwellAnchor, page.dwellSentence, document.getElementById('pet-svg-btn').getBoundingClientRect());
+      });
+
+      viewport.addEventListener('mouseup', () => {
+        setTimeout(() => {
+          const sel = window.getSelection();
+          if (!sel || sel.isCollapsed) return;
+          const text = sel.toString().trim();
+          if (text.length < 2) return;
+          const range = sel.getRangeAt(0);
+          const rects = range.getClientRects();
+          const rect = rects.length ? rects[rects.length - 1] : range.getBoundingClientRect();
+          const anchorEl = sel.anchorNode && sel.anchorNode.parentElement ? sel.anchorNode.parentElement.closest('p, div') : null;
+          const contextSentence = anchorEl ? anchorEl.textContent.trim() : '';
+          showCapsuleAtRect(text, contextSentence, rect);
+        }, 10);
+      });
+
+      const arbitraryInput = document.getElementById('arbitrary-test-input');
+      function runArbitraryTest() {
+        const val = arbitraryInput.value.trim();
+        if (!val) { showToast('先输入任意术语或英文长难句再测试~'); return; }
+        openCardAtRect(val, val, 'l1', arbitraryInput.getBoundingClientRect());
+      }
+      document.getElementById('btn-arbitrary-test').addEventListener('click', runArbitraryTest);
+      arbitraryInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runArbitraryTest(); } });
+
+      document.getElementById('btn-toggle-mobile').addEventListener('click', () => {
+        mobileMode = !mobileMode;
+        browserShell.classList.toggle('mobile-frame', mobileMode);
+        document.getElementById('mobile-toggle-label').textContent = mobileMode ? '恢复桌面扩展视角' : '知乎 App 入口视角';
+      });
+
+      window.addEventListener('load', () => {
+        if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+        renderPage('paper');
+        updateVaultUI();
+        setPetMood('idle');
+      });
+    })();
+  </script>
+</body>
+</html>
